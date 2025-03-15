@@ -52,8 +52,10 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
    1. We're going to use the same DB of the app for cache, queue, cable to keep things simple.
    2. The env variable `DATABASE_URL` should already be defined by DigitalOcean, go to setting, your rails app and then `Environment Variables`.
       ![Step 11](doc/images/img11.png)
-   3. Next, lets set the database in our project following these steps:
-      1. Add the necessary gems for Active Record and your chosen database adapter (e.g., sqlite3, pg, or mysql2).
+   3. Delete the current Dockerfile and remove the `.example` extension from the other Dockerfile.
+   4. ⚠**️Important**! ⚠️, push these changes to the `production` branch before continue, I was having a problem with the gems and `bundle install` but this fixed it.
+   5. Next, lets set the database in our project following these steps:
+      1. Un comment the following gems in the Gemfile
           ```ruby
             gem "activerecord"
             gem "pg", "~> 1.1"
@@ -64,7 +66,6 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
             require "active_record/railtie"
           ```
       4. There is a config/database.yml.example file with your database settings. Remove the `.example`.
-      5. Delete the current Dockerfile and remove the `.example` extension from the other Dockerfile.
       6. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
          ```bash
             # If running the rails server then create or migrate existing database
