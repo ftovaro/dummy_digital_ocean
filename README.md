@@ -93,3 +93,18 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
 12. You should have a working Rails app deployed in DigitalOcean's App Platform.
 ![Step 11](doc/images/img11.png)
 
+# How to setup your domain
+I'm using GoDaddy for this test.
+
+1. Go to `Settings` and `Domains`.
+2. Click on `Edit` then `Add Domain`.
+3. Write your domain and click on `Add Domain`.
+   ![Step 12](doc/images/img12.png)
+4. Copy the CNAME then click on `Add Domain`.
+5. Go to Daddy and go to the `Manage DNS` section, then click on `Add new register` (My account is in Spanish).
+![Step 13](doc/images/img13.png)
+6. Select `CNAME` as the type, write the host and the value, then click on `Save`.
+![Step 14](doc/images/img14.png)
+7. Now go to `Redirect`, add new domain redirect, select `https`, write the subdomain we just created (with www), select 301 and save.
+![Step 15](doc/images/img15.png)
+8. Wait a few minutes and you should be able to access your app with your domain.
