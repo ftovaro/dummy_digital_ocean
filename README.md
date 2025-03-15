@@ -66,7 +66,7 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
             require "active_record/railtie"
           ```
       4. Remove the `.example` extension for the file in `app/models/application_record.rb.example`
-      5. There is a config/database.yml.example file with your database settings. Remove the `.example`.
+      5. There is a `config/database.yml.example` file with your database settings. Remove the `.example`.
       6. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
          ```bash
             # If running the rails server then create or migrate existing database
@@ -78,3 +78,17 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
           ```bash
             exec "${@}"
           ```
+9. Push these changes to the `production` branch and wait for the deployment to finish.
+10. Now we can test our app, lets create our post model and run the migrations.
+    1. Run the following command to create the post model:
+        ```bash
+          bin/rails g scaffold post title:string body:text
+        ```
+    2. Run the following command to create the database:
+        ```bash
+          bin/rails db:migrate
+        ```
+    3. Push these changes to the `production` branch and wait for the deployment to finish.
+11. Now, access to `/posts` in your app and test creating your first post.
+
+
