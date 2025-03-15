@@ -90,5 +90,6 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
         ```
     3. Push these changes to the `production` branch and wait for the deployment to finish.
 11. Now, access to `/posts` in your app and test creating your first post.
-
+12. You should have a working Rails app deployed in DigitalOcean's App Platform.
+![Step 11](doc/images/img11.png)
 
