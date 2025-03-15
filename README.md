@@ -48,37 +48,33 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
 7. Once the database is created, you can get the credentials by clicking on setting and then on the database, scroll down.
 ![Step 10](doc/images/img10.png)
 
-   8. Now, we're going to use env variable called `DATABASE_URL`.
-      1. We're going to use the same DB of the app for cache, queue, cable to keep things simple.
-      2. The env variable `DATABASE_URL` should already be defined by DigitalOcean, go to setting, your rails app and then `Environment Variables`.
-         ![Step 11](doc/images/img11.png)
-         3. Next, lets set the database in our project following these steps:
-            1. Add the necessary gems for Active Record and your chosen database adapter (e.g., sqlite3, pg, or mysql2).
-                ```ruby
-                  gem 'activerecord'
-                  gem "pg", "~> 1.1"
-                ```
-            2. Modify your config/application.rb to load Active Record by adding: 
-                ```ruby
-                  require "active_record/railtie"
-                ```
-            3. There is a config/database.yml.example file with your database settings. Remove the `.example`.
-            4. Execute the generator to set up necessary files (like initializers and migrations):
-                ```bash
-                  rails generate active_record:install
-                ```
-            5. Create the database:
-               ```bash
-               rails db:create
-               ```
-            6. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
-               ```bash
-                  # If running the rails server then create or migrate existing database
-                  if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-                  ./bin/rails db:prepare
-                  fi
-               ```
-               Just before
-                ```bash
-                  exec "${@}"
-                ```
+8. Now, we're going to use env variable called `DATABASE_URL`.
+   1. We're going to use the same DB of the app for cache, queue, cable to keep things simple.
+   2. The env variable `DATABASE_URL` should already be defined by DigitalOcean, go to setting, your rails app and then `Environment Variables`.
+      ![Step 11](doc/images/img11.png)
+   3. Next, lets set the database in our project following these steps:
+      1. Add the necessary gems for Active Record and your chosen database adapter (e.g., sqlite3, pg, or mysql2).
+          ```ruby
+            gem "activerecord"
+            gem "pg", "~> 1.1"
+          ```
+      2. Modify your config/application.rb to load Active Record by uncommenting:
+          ```ruby
+            require "active_record/railtie"
+          ```
+      3. There is a config/database.yml.example file with your database settings. Remove the `.example`.
+      4. Create the database:
+         ```bash
+         rails db:create
+         ```
+      5. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
+         ```bash
+            # If running the rails server then create or migrate existing database
+            if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+            ./bin/rails db:prepare
+            fi
+         ```
+         Just before
+          ```bash
+            exec "${@}"
+          ```
