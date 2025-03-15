@@ -58,13 +58,14 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
             gem "activerecord"
             gem "pg", "~> 1.1"
           ```
-      2. Modify your config/application.rb to load Active Record by uncommenting:
+      2. Run `bundle install`.
+      3. Modify your config/application.rb to load Active Record by uncommenting:
           ```ruby
             require "active_record/railtie"
           ```
-      3. There is a config/database.yml.example file with your database settings. Remove the `.example`.
-      4. Delete the current Dockerfile and remove the `.example` extension from the other Dockerfile.
-      5. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
+      4. There is a config/database.yml.example file with your database settings. Remove the `.example`.
+      5. Delete the current Dockerfile and remove the `.example` extension from the other Dockerfile.
+      6. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
          ```bash
             # If running the rails server then create or migrate existing database
             if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
