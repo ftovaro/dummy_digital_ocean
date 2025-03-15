@@ -65,7 +65,8 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
           ```ruby
             require "active_record/railtie"
           ```
-      4. There is a config/database.yml.example file with your database settings. Remove the `.example`.
+      4. Uncomment the file in `app/models/application_record.rb`
+      5. There is a config/database.yml.example file with your database settings. Remove the `.example`.
       6. Finally, we need to edit our `bin/docker-entrypoint` to run migrations. Add:
          ```bash
             # If running the rails server then create or migrate existing database
