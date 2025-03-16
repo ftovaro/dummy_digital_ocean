@@ -145,8 +145,8 @@ Credits about how to use a single database for everything goes to [briancasel](h
    5. Run the migration.
    6. Now, our databases are in sync.
 4. My suggestion is to push and wait to deploy these changes before continue. If you have any problem, try to do it one step at the time and pushing the changes.
-5. Then, we need to modify `production.rb` and `development.rb` to add the following configuration:
-    (`development.rb` runs by default in our RAM)
+5. Then, we need to modify `production.rb` to add the following configuration:
+    (`SolidQueue` runs by default in our RAM)
     ```ruby
         config.active_job.queue_adapter = :solid_queue
         config.solid_queue.connects_to = { database: { writing: :queue } }
