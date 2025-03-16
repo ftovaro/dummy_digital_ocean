@@ -6,14 +6,13 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
 # Steps to create this project
 1. Fork this project.
 2. Create a new branch called `production`.
-3. We need the env files for the RAILS_MASTER_KEY, SECRET_KEY_BASE, RAILS_ENV and RACK_ENV
+3. We need the env files for the RAILS_MASTER_KEY, SECRET_KEY_BASE.
     1. To get the RAILS_MASTER_KEY, you can extract it from config/master.key file.
     2. To get the SECRET_KEY_BASE, we need to run the following command in the terminal:
         ```bash
         EDITOR="code --wait" bin/rails credentials:edit
         ```
         This will open a new file in the code editor. We need to copy the SECRET_KEY_BASE and paste it in the env file.
-   3. The RAILS_ENV and RACK_ENV should be set to production.
 4. Create a .env file with this data, we're going to use it when setting the app.
 5. This app starts without a database. We will attach it later to use the development database provided by DigitalOcean's App Platform. Otherwise, the deployment will fail because the development database is deployed after the Rails app, causing a deadlock since the Rails app requires a database to deploy.
 
@@ -93,7 +92,7 @@ This project is a simple Rails app that is going to be deployed in DigitalOcean'
 12. You should have a working Rails app deployed in DigitalOcean's App Platform.
 ![Step 11](doc/images/img11.png)
 
-# How to setup your domain
+# How to set up your domain
 I'm using GoDaddy for this test.
 
 1. Go to `Settings` and `Domains`.
@@ -107,4 +106,156 @@ I'm using GoDaddy for this test.
 ![Step 14](doc/images/img14.png)
 7. Now go to `Redirect`, add new domain redirect, select `https`, write the subdomain we just created (with www), select 301 and save.
 ![Step 15](doc/images/img15.png)
-8. Wait a few minutes and you should be able to access your app with your domain.
+8. Wait a few minutes, and you should be able to access your app with your domain.
+
+# How to set up Active Job with Solid Queue and DigitalOcean Worker
+
+1. Go to the `Create` tab and click on `Create/Attach` like we are attaching a new Web Service.
+2. Select Worker instead of Web Service.
+3. Same as before, select Docker, basic size, and the closest region.
+4. The worker must have access to your database, so put in the env variables `DATABASE_URL` same as your Web Service, typically is something like `${name-of-dabatase.DATABASE_URL}`.
+5. Click on `Create`.
+
+### Installing `solid_queue`.
+
+Since this is a test, we're going to use the same database for the queue, cache, and cable.
+The `database.yml` already have this configuration.
+
+Credits about how to use a single database for everything goes to [briancasel](https://briancasel.gitbook.io/cheatsheet/rails-1/setup-solid-queue-cable-cache-in-rails-8-to-share-a-single-database)
+
+1. Uncomment the following gems to your Gemfile:
+    ```ruby
+      gem "solid_queue", "~> 1.1"
+
+      gem "mission_control-jobs"
+    ```
+    Run `bundle install`. `mission_control` is our dashboard where we can see the current jobs.
+2. Run the following command to install it:
+    ```bash
+      bin/rails solid_queue:install
+    ```
+3. Now, this is the tricky part, using a single database:
+   1. When we ran the `solid_queue:install` command, it created the schema file for `queue`. 
+   2. We are going create a new migration:
+        ```bash
+          bin/rails g migration addSolidQueueTables
+        ```
+   3. Next, copy what's **INSIDE** `ActiveRecord::Schema[8.0].define(version: 2025_03_16_001049) do`
+   4. Paste it in the migration file. Inside the `change`.
+   5. Run the migration.
+   6. Now, our databases are in sync.
+4. My suggestion is to push and wait to deploy these changes before continue. If you have any problem, try to do it one step at the time and pushing the changes.
+5. Then, we need to modify `production.rb` and `development.rb` to add the following configuration:
+    (`development.rb` runs by default in our RAM)
+    ```ruby
+        config.active_job.queue_adapter = :solid_queue
+        config.solid_queue.connects_to = { database: { writing: :queue } }
+    ```
+6. Next, we need to modify `Puma`: 
+    1. Add the following line in the `config/puma.rb`:
+        ```ruby
+            # Run the Solid Queue supervisor inside of Puma for single-server deployments
+            plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"] || Rails.env.development?
+        ```
+7. This still is not going to work in production, we have some missing pieces but we can test it in development.
+8. Let's create a new job:
+    ```bash
+      bin/rails generate job guests_cleanup
+    ```
+9. Open the new job and write:
+    ```ruby
+      class GuestsCleanupJob < ApplicationJob
+           queue_as :default
+    
+           def perform(*guests)
+            Rails.logger.info("Inside the job")
+
+            sleep 20
+            Post.create(title: "Job", body: "Job content: #{Time.now}")
+           end
+         end
+    ```
+10. In our PostController, add the following line in the `index` method:
+    ```ruby
+      GuestsCleanupJob.perform_later
+    ```
+11. Run the server, for me, at the beginning it didn't work with `rails s`, so I had to run it with `bin/dev`, but after that it started worked with `rails s`.
+12. Test your app, you should see the job running in the logs.
+
+### Deploying the Worker
+1. ⚠️**️Important**! ⚠️To make this work with Digital Ocean, we need to add the following env variable to the `Worker` in the DigitalOcean dashboard of our worker:
+    ```bash
+      $PROCESS_TYPE=worker
+    ```
+    This needs to be deployed before pushing the changes of our entry point.
+2. Now, lets modify our `bin/docker-entrypoint`. Add the following lines:
+    ```bash
+      #!/bin/bash -e
+
+      # Enable jemalloc for reduced memory usage and latency.
+      if [ -z "${LD_PRELOAD+x}" ]; then
+        LD_PRELOAD=$(find /usr/lib -name libjemalloc.so.2 -print -quit)
+        export LD_PRELOAD
+      fi
+
+      # Check process type: default is 'web'
+      PROCESS_TYPE="${PROCESS_TYPE:-web}"
+    
+      if [ "$PROCESS_TYPE" = "web" ]; then
+        # If running the rails server, then create or migrate existing database
+        if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+        ./bin/rails db:prepare
+        fi
+    
+        exec "${@}"
+    
+      elif [ "$PROCESS_TYPE" = "worker" ]; then
+        echo "Running Solid Queue Worker..."
+        exec bundle exec rails solid_queue:start
+    
+      else
+        echo "Unknown PROCESS_TYPE: ${PROCESS_TYPE}"
+        exit 1
+      fi
+    ```
+
+## Notes
+
+At the point of writing this, I don't remember if I had to set up the env variable `SOLID_QUEUE_IN_PUMA`.
+I had to do some try and fail to make it work, and I don't remember that step.
+But we have two options to define it if we need it:
+1. In the `Environment Variables` in the DigitalOcean dashboard. (I think we'll need to set it for the entire app and not just the web service)
+    ```bash
+      SOLID_QUEUE_IN_PUMA=true
+    ```
+   I suggest testing this option first.
+2. In the `Dockerfile`:
+    ```bash
+      # Set production environment
+      ENV RAILS_ENV="production" \
+          BUNDLE_DEPLOYMENT="1" \
+          SOLID_QUEUE_IN_PUMA="true" \
+          BUNDLE_PATH="/usr/local/bundle" \
+          BUNDLE_WITHOUT="development"
+    ```
+
+# How to set up Mission Control
+
+Mission Control only works if we have some credential set, for me, the easiest way to do it was:
+
+1. Run the following command (There is a way to specify the environment, but for testing purposes, I'm going to use the default one):
+    ```bash
+      EDITOR="code --wait" bin/rails credentials:edit
+    ```
+2. Write the following:
+    ```yaml
+      mission_control:
+        http_basic_auth_user: dev
+        http_basic_auth_password: secret
+    ```
+   Save and close the file.
+3. Add this route:
+    ```ruby
+      mount MissionControl::Jobs::Engine, at: "/jobs"
+    ```
+4. Now, when you access `/jobs`, you should be asked to enter the credentials, then you can see the dashboard.

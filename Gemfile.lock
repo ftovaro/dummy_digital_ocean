@@ -301,6 +301,7 @@ PLATFORMS
   aarch64-linux-musl
   arm-linux-gnu
   arm-linux-musl
+  arm64-darwin-23
   arm64-darwin-24
   x86_64-linux
   x86_64-linux-gnu
@@ -324,4 +325,4 @@ DEPENDENCIES
   web-console
 
 BUNDLED WITH
-   2.6.2
+   2.5.22
